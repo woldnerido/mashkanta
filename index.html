@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מסקנטה – ניתוח משכנתא</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600&family=Frank+Ruhl+Libre:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1714;
+  --text2: #5c564e;
+  --text3: #9c9187;
+  --accent: #1a3a2a;
+  --accent-light: #e8f0eb;
+  --danger: #8b2020;
+  --danger-light: #fdf0f0;
+  --warn: #7a4a10;
+  --warn-light: #fdf4e8;
+  --good: #1a4a2a;
+  --good-light: #e8f5ec;
+  --blue: #1a2e4a;
+  --blue-light: #e8eef5;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+header { background: var(--accent); color: white; padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Frank Ruhl Libre', serif; font-size: 22px; font-weight: 700; }
+.logo span { color: #7dc4a0; }
+.header-meta { font-size: 12px; color: rgba(255,255,255,0.5); }
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
+.sidebar { background: var(--surface); border-left: 1px solid var(--border); padding: 1.5rem 0; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+.sidebar-section { padding: 0 1rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+.sidebar-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.75rem; padding: 0 0.5rem; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; color: var(--text2); transition: all 0.15s; margin-bottom: 2px; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+main { padding: 2rem; max-width: 960px; }
+.page { display: none; }
+.page.active { display: block; }
+.page-title { font-family: 'Frank Ruhl Libre', serif; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text3); margin-bottom: 1.5rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.card-title { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 1rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; box-shadow: var(--shadow); }
+.metric-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+.metric-value { font-family: 'Frank Ruhl Libre', serif; font-size: 24px; font-weight: 700; line-height: 1.1; }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.alert { border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; margin-bottom: 1rem; border-right: 3px solid; line-height: 1.5; }
+.alert-warn { background: var(--warn-light); color: var(--warn); border-color: #d4860a; }
+.alert-good { background: var(--good-light); color: var(--good); border-color: #2a8a4a; }
+.alert-danger { background: var(--danger-light); color: var(--danger); border-color: #c03030; }
+.alert-info { background: var(--blue-light); color: var(--blue); border-color: #3a6aaa; }
+.alert strong { font-weight: 600; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: right; font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; padding: 0 12px 10px; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface2); }
+.tag { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.tag-red { background: var(--danger-light); color: var(--danger); }
+.tag-green { background: var(--good-light); color: var(--good); }
+.tag-amber { background: var(--warn-light); color: var(--warn); }
+.tag-blue { background: var(--blue-light); color: var(--blue); }
+.tag-gray { background: var(--surface2); color: var(--text2); }
+.chart-wrap { position: relative; width: 100%; }
+.gap-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.gap-label { font-size: 13px; color: var(--text2); min-width: 180px; }
+.gap-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.gap-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.gap-pct { font-size: 13px; font-weight: 600; min-width: 64px; }
+.compare-hero { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
+.compare-side { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; text-align: center; box-shadow: var(--shadow); }
+.compare-side.best { border-color: #2a8a4a; border-width: 2px; }
+.compare-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 8px; }
+.compare-num { font-family: 'Frank Ruhl Libre', serif; font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.compare-arrow { font-size: 28px; color: var(--text3); text-align: center; }
+.pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border2); cursor: pointer; background: transparent; color: var(--text2); transition: all 0.15s; font-family: 'Heebo', sans-serif; }
+.pill:hover { background: var(--surface2); }
+.pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+.filter-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.savings-chip { background: var(--good-light); color: var(--good); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.update-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: var(--text3); margin-bottom: 1rem; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #2a8a4a; display: inline-block; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+footer { padding: 1rem 2rem; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 2rem; text-align: center; }
+.legend-key { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+.legend-item { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 12px; flex: 1; min-width: 140px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-item b { font-weight: 600; margin-left: 2px; }
+.legend-item span { color: var(--text3); font-size: 11px; }
+.bank-link-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 14px; transition: border-color 0.15s, box-shadow 0.15s; }
+.bank-link-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+.bank-logo { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; }
+.bank-info { flex: 1; }
+.bank-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.bank-rates-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+.bank-rate-item { font-size: 12px; color: var(--text2); }
+.bank-rate-item b { color: var(--good); }
+.bank-rate-item.expensive b { color: var(--danger); }
+.bank-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.bank-link { font-size: 11px; padding: 3px 10px; border: 1px solid var(--border2); border-radius: 20px; color: var(--blue); text-decoration: none; background: var(--blue-light); transition: opacity 0.15s; }
+.bank-link:hover { opacity: 0.8; }
+.gap-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-right: 6px; }
+.gap-badge-red { background: var(--danger-light); color: var(--danger); }
+.gap-badge-green { background: var(--good-light); color: var(--good); }
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.compare-hero{grid-template-columns:1fr}.two-col{grid-template-columns:1fr}main{padding:1rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">מסק<span>נטה</span></div>
+  <div class="header-meta">בנק מזרחי טפחות · עידו ולדנר · 08/04/2026</div>
+</header>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">ניתוח</div>
+      <div class="nav-item active" onclick="showPage('overview',this)">⊞ &nbsp;סקירה כללית</div>
+      <div class="nav-item" onclick="showPage('compare',this)">⇄ &nbsp;השוואה לשוק</div>
+      <div class="nav-item" onclick="showPage('optimize',this)">◎ &nbsp;אופטימיזציה</div>
+      <div class="nav-item" onclick="showPage('combos',this)">≡ &nbsp;הרכבי תמהיל</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">סיכום</div>
+      <div style="padding:0 0.5rem;font-size:12px;color:var(--text3);line-height:2">
+        יתרה כוללת<br>
+        <span style="font-size:15px;font-weight:600;color:var(--text)">₪2,069,283</span><br>
+        החזר חודשי<br>
+        <span style="font-size:15px;font-weight:600;color:var(--text)">₪11,282</span><br>
+        ריבית ממוצעת שלי<br>
+        <span style="font-size:15px;font-weight:600;color:var(--danger)">4.24%</span><br>
+        ריבית שוק ממוצעת<br>
+        <span style="font-size:15px;font-weight:600;color:var(--good)">3.80%</span>
+      </div>
+    </div>
+    <div style="padding:1rem 1.5rem;font-size:11px;color:var(--text3)">
+      מקור: בנק ישראל דצמבר 2025
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page active">
+      <div class="page-title">סקירה כללית</div>
+      <div class="page-sub">מצב המשכנתא שלך נכון לתאריך היום</div>
+
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-label">יתרה כוללת</div><div class="metric-value">₪2,069,283</div><div class="metric-sub">3 תיקים · 8 חלקים</div></div>
+        <div class="metric"><div class="metric-label">החזר חודשי</div><div class="metric-value">₪11,282</div><div class="metric-sub">שיטת שפיצר</div></div>
+        <div class="metric"><div class="metric-label">ריבית ממוצעת שלי</div><div class="metric-value" style="color:var(--danger)">4.24%</div><div class="metric-sub">משוקלל לפי יתרה</div></div>
+        <div class="metric"><div class="metric-label">ריבית שוק</div><div class="metric-value" style="color:var(--good)">3.80%</div><div class="metric-sub">ממוצע כלל הבנקים</div></div>
+      </div>
+
+      <div class="alert alert-warn">
+        <strong>פער מהשוק:</strong> הריבית הממוצעת שלך גבוהה ב-0.44% מממוצע השוק. פוטנציאל חיסכון שנתי של <strong>₪4,600–7,200</strong> במיחזור אופטימלי.
+      </div>
+
+      <div class="legend-key">
+        <div class="legend-item"><div class="legend-dot" style="background:#2a8a4a"></div><b>מצוין</b><span>ריבית נמוכה מהשוק — שמור</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1a4a8a"></div><b>טוב</b><span>תחרותי, עד 0.2% מהשוק</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d4860a"></div><b>לבדיקה</b><span>פער 0.2%–0.5% — שווה לבדוק</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c03030"></div><b>יקר</b><span>0.5%+ מהשוק — בחן מיחזור</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">פירוט חלקי המשכנתא</div>
+        <table class="data-table">
+          <thead><tr><th>מסלול</th><th>תיק</th><th>יתרה</th><th>ריבית</th><th>הצמדה</th><th>סיום</th><th>סטטוס</th></tr></thead>
+          <tbody>
+            <tr><td><strong>פריים</strong></td><td style="color:var(--text3);font-size:12px">428584347</td><td>₪297,038</td><td style="color:var(--good);font-weight:600">2.48%</td><td>לא צמוד</td><td>03/2041</td><td><span class="tag tag-green">מצוין</span></td></tr>
+            <tr><td><strong>משתנה 5 שנים אג"ח</strong></td><td style="color:var(--text3);font-size:12px">428584347</td><td style="color:var(--text3)">—</td><td>4.55%</td><td>לא צמוד</td><td>03/2041</td><td><span class="tag tag-amber">לבדיקה</span></td></tr>
+            <tr><td><strong>משתנה 2.5 שנים</strong></td><td style="color:var(--text3);font-size:12px">443857209</td><td>₪250,000</td><td>3.39%</td><td>צמוד מדד</td><td>01/2055</td><td><span class="tag tag-green">טוב</span></td></tr>
+            <tr><td><strong>קבועה לא צמודה</strong></td><td style="color:var(--text3);font-size:12px">443857209</td><td>₪200,000</td><td style="color:var(--danger);font-weight:600">4.90%</td><td>לא צמוד</td><td>01/2055</td><td><span class="tag tag-red">יקר</span></td></tr>
+            <tr><td><strong>משתנה 2.5 שנים</strong></td><td style="color:var(--text3);font-size:12px">443857209</td><td>₪100,000</td><td style="color:var(--good);font-weight:600">3.16%</td><td>צמוד מדד</td><td>02/2055</td><td><span class="tag tag-green">טוב</span></td></tr>
+            <tr><td><strong>קבועה לא צמודה</strong></td><td style="color:var(--text3);font-size:12px">442886047</td><td>₪412,223</td><td style="color:var(--danger);font-weight:600">4.70%</td><td>לא צמוד</td><td>06/2049</td><td><span class="tag tag-red">יקר</span></td></tr>
+            <tr><td><strong>משתנה 5 שנים אג"ח</strong></td><td style="color:var(--text3);font-size:12px">442886047</td><td>₪360,056</td><td style="color:var(--danger);font-weight:600">5.15%</td><td>לא צמוד</td><td>06/2054</td><td><span class="tag tag-red">יקר</span></td></tr>
+            <tr><td><strong>משתנה 2 שנים אג"ח</strong></td><td style="color:var(--text3);font-size:12px">442886047</td><td>₪449,231</td><td style="color:var(--danger);font-weight:600">5.10%</td><td>לא צמוד</td><td>06/2054</td><td><span class="tag tag-red">יקר</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">התפלגות יתרה לפי מסלול</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="overviewChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- COMPARE -->
+    <div id="page-compare" class="page">
+      <div class="page-title">השוואה לשוק</div>
+      <div class="page-sub">ריביות שלך מול ממוצע השוק לפי מסלול</div>
+
+      <div class="update-badge"><span class="dot"></span>נתוני בנק ישראל — ינואר 2026 (פורסמו 11/02/2026) · מקור: <a href="https://www.boi.org.il/information/interestrates/mortgage/" target="_blank" style="color:var(--good)">boi.org.il</a></div>
+
+      <div class="card">
+        <div class="card-title">פערי ריבית לפי מסלול</div>
+        <div id="gap-list"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">מסלולים יקרים — כדאי לבדוק</div>
+          <div id="weak-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">מסלולים תחרותיים — שמור</div>
+          <div id="strong-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ריביות ממוצעות בשוק לפי בנק ומסלול</div>
+        <div class="chart-wrap" style="height:300px"><canvas id="bankChart"></canvas></div>
+        <p style="font-size:11px;color:var(--text3);margin-top:10px">מקור: נתוני בנק ישראל + השוואת ריביות. הנתונים מייצגים ממוצע תיק ולא ריבית פרסונלית.</p>
+      </div>
+
+      <div class="page-title" style="font-size:18px;margin:1.5rem 0 0.5rem">פעל עכשיו — מסלולים לבדיקה</div>
+      <div class="page-sub">על בסיס ממוצעי השוק מבנק ישראל (ינואר 2026) — הריביות שלך מול השוק</div>
+
+      <div class="alert alert-info" style="margin-bottom:1rem">
+        <strong>מקור הנתונים:</strong> ריביות השוק המוצגות כאן הן <strong>ממוצעי שוק רשמיים של בנק ישראל</strong> — ינואר 2026. הן אינן ריביות של בנק ספציפי. הריבית שתקבל תלויה בפרופיל האישי שלך ובמשא ומתן.
+      </div>
+
+      <div class="bank-link-card">
+        <div class="bank-logo" style="background:#c03030">יקר!</div>
+        <div class="bank-info">
+          <div class="bank-name">קבועה לא צמודה (קל"צ) — <span style="color:var(--danger)">פער לחובתך</span></div>
+          <div class="bank-rates-row">
+            <div class="bank-rate-item">ריבית שלך: <b class="expensive">4.70%–4.90%</b></div>
+            <div class="bank-rate-item">ממוצע שוק: <b>4.95%</b></div>
+            <div class="bank-rate-item expensive">פער: <b>ריביות שלך תחרותיות!</b></div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">ממוצע השוק גבוה מהריבית שלך — המסלול הזה תחרותי.</div>
+          <div class="bank-links">
+            <a class="bank-link" href="https://www.boi.org.il/information/interestrates/mortgage/" target="_blank">נתוני בנק ישראל →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="bank-link-card">
+        <div class="bank-logo" style="background:#c03030">יקר!</div>
+        <div class="bank-info">
+          <div class="bank-name">משתנה 2 שנים, לא צמוד — <span style="color:var(--danger)">פער לחובתך</span></div>
+          <div class="bank-rates-row">
+            <div class="bank-rate-item">ריבית שלך: <b class="expensive">5.10%</b></div>
+            <div class="bank-rate-item">ממוצע שוק (מעל 25 שנה): <b>4.95%</b></div>
+            <div class="bank-rate-item expensive">פער: <b>+0.15%</b></div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">המסלול הכי יקר שלך ביחס לשוק. שווה לבדוק מיחזור בתחנת השינוי הקרובה (06/2026).</div>
+          <div class="bank-links">
+            <a class="bank-link" href="https://www.boi.org.il/information/interestrates/mortgage/" target="_blank">נתוני בנק ישראל →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="bank-link-card">
+        <div class="bank-logo" style="background:#2a8a4a">טוב</div>
+        <div class="bank-info">
+          <div class="bank-name">משתנה 2.5 שנים, צמוד מדד — <span style="color:var(--good)">תחרותי</span></div>
+          <div class="bank-rates-row">
+            <div class="bank-rate-item">ריביות שלך: <b>3.16%–3.39%</b></div>
+            <div class="bank-rate-item">ממוצע שוק 5-10 שנים: <b>3.73%</b></div>
+            <div class="bank-rate-item">פער: <b style="color:var(--good)">לטובתך!</b></div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">הריביות שלך במסלול זה טובות מממוצע השוק — שמור על המסלולים האלה.</div>
+        </div>
+      </div>
+
+      <div class="bank-link-card" style="border-color:var(--border2)">
+        <div class="bank-logo" style="background:#555">בנק ישראל</div>
+        <div class="bank-info">
+          <div class="bank-name">כלי השוואה רשמיים — בנק ישראל</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">כל הנתונים בדף זה מקורם בבנק ישראל. הורד את הקבצים המלאים:</div>
+          <div class="bank-links">
+            <a class="bank-link" href="https://www.boi.org.il/boi_files/Pikuah/mashfix.xls" target="_blank">ריבית ממוצעת לא צמוד (XLS) →</a>
+            <a class="bank-link" href="https://www.boi.org.il/boi_files/Pikuah/pribmash.xls" target="_blank">ריבית ממוצעת צמוד מדד (XLS) →</a>
+            <a class="bank-link" href="https://www.boi.org.il/information/interestrates/mortgage/" target="_blank">דף ריביות בנק ישראל →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTIMIZE -->
+    <div id="page-optimize" class="page">
+      <div class="page-title">אופטימיזציה</div>
+      <div class="page-sub">המשכנתא שלך מול התמהיל האולטימטיבי</div>
+
+      <div class="legend-key">
+        <div class="legend-item"><div class="legend-dot" style="background:#1a4a8a"></div><b>שמור</b><span>ריבית תחרותית — אין צורך בשינוי</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2a8a4a"></div><b>מחזר</b><span>כדאי לעבור לריבית שוק — חיסכון ברור</span></div>
+      </div>
+
+      <div class="compare-hero">
+        <div class="compare-side">
+          <div class="compare-label">המשכנתא שלך היום</div>
+          <div class="compare-num" style="color:var(--danger)">₪11,282</div>
+          <div style="font-size:13px;color:var(--text3)">ריבית ממוצעת: 4.24%</div>
+        </div>
+        <div class="compare-arrow">→</div>
+        <div class="compare-side best">
+          <div class="compare-label">תמהיל אופטימלי</div>
+          <div class="compare-num" style="color:var(--good)">₪10,893</div>
+          <div style="font-size:13px;color:var(--text3)">ריבית ממוצעת: 3.62%</div>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-label">פער חודשי</div><div class="metric-value" style="color:var(--danger)">₪389</div><div class="metric-sub">לטובת האופטימלי</div></div>
+        <div class="metric"><div class="metric-label">חיסכון שנתי</div><div class="metric-value" style="color:var(--danger)">₪4,668</div><div class="metric-sub">על בסיס יתרה נוכחית</div></div>
+        <div class="metric"><div class="metric-label">חיסכון 10 שנים</div><div class="metric-value" style="color:var(--good)">₪46,680</div><div class="metric-sub">ללא ריבית דריבית</div></div>
+        <div class="metric"><div class="metric-label">פער ריבית</div><div class="metric-value">0.62%</div><div class="metric-sub">4.24% ← 3.62%</div></div>
+      </div>
+
+      <div class="alert alert-good">
+        <strong>המסקנה:</strong> שלושת החלקים הבעייתיים הם הקבועה לא צמודה (4.70% ו-4.90%) והמשתנה 5 שנים (5.15%). מיחזור שלהם לריביות שוק תחרותיות יניב את מרבית החיסכון.
+      </div>
+
+      <div class="card">
+        <div class="card-title">השוואת ריביות: שלי מול אופטימלי לפי מסלול</div>
+        <div class="chart-wrap" style="height:280px"><canvas id="compareChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">תמהיל אופטימלי מוצע</div>
+        <table class="data-table">
+          <thead><tr><th>מסלול</th><th>סכום</th><th>ריבית שוק</th><th>פעולה</th><th>חיסכון חודשי</th></tr></thead>
+          <tbody>
+            <tr><td><strong>פריים לא צמוד</strong></td><td>₪297,038</td><td style="color:var(--good)">2.48%</td><td><span class="tag tag-blue">שמור</span></td><td style="color:var(--text3)">—</td></tr>
+            <tr><td><strong>מצמ 2.5 שנים (2 חלקים)</strong></td><td>₪350,000</td><td style="color:var(--good)">3.20%</td><td><span class="tag tag-blue">שמור</span></td><td style="color:var(--text3)">—</td></tr>
+            <tr><td><strong>קל"צ → מל"צ 5 שנים</strong></td><td>₪612,223</td><td style="color:var(--good)">4.20%</td><td><span class="tag tag-green">מחזר</span></td><td style="color:var(--good);font-weight:600">+₪185/חודש</td></tr>
+            <tr><td><strong>מל"צ 5 שנים → 3.90%</strong></td><td>₪809,287</td><td style="color:var(--good)">3.90%</td><td><span class="tag tag-green">מחזר</span></td><td style="color:var(--good);font-weight:600">+₪204/חודש</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">חיסכון מצטבר לאורך זמן</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="savingsChart"></canvas></div>
+      </div>
+
+      <div class="alert alert-warn">
+        <strong>לפני מיחזור:</strong> בדוק עמלת פירעון מוקדם — תיק 442886047 (קבועה, 4.70%) עשוי לכלול עמלת היוון. כדאי לבקש אישור סילוק ולשקול המתנה לחודש שינוי הריבית (06/2026) לפירעון ללא עמלה.
+      </div>
+    </div>
+
+    <!-- COMBOS -->
+    <div id="page-combos" class="page">
+      <div class="page-title">הרכבי תמהיל</div>
+      <div class="page-sub">כל הקומבינציות האפשריות, ממוינות לפי חיסכון שנתי</div>
+
+      <div class="legend-key">
+        <div class="legend-item"><div class="legend-dot" style="background:#2a8a4a"></div><b>מומלץ</b><span>הרכב מיטבי — חיסכון גבוה + סיכון נמוך</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1a4a8a"></div><b>טוב</b><span>חיסכון משמעותי, עמלה סבירה</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d4860a"></div><b>אגרסיבי</b><span>חיסכון גבוה אך חשיפה גבוהה לשינוי מדד/ריבית</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#888"></div><b>שקול</b><span>חיסכון מוגבל או עמלת פירעון גבוהה</span></div>
+      </div>
+
+      <div class="filter-pills">
+        <button class="pill active" onclick="filterCombos('all',this)">הכל</button>
+        <button class="pill" onclick="filterCombos('save5k',this)">חיסכון ₪5,000+</button>
+        <button class="pill" onclick="filterCombos('nocz',this)">לא צמוד בלבד</button>
+        <button class="pill" onclick="filterCombos('fixed',this)">כולל קבועה</button>
+        <button class="pill" onclick="filterCombos('low',this)">ריבית מתחת 4%</button>
+        <button class="pill" onclick="filterCombos('nopen',this)">עמלה נמוכה</button>
+      </div>
+
+      <div class="card" style="padding:1rem 1.25rem;overflow-x:auto">
+        <table class="data-table" id="combo-table">
+          <thead><tr><th>הרכב תמהיל</th><th>ריבית ממוצעת</th><th>החזר חודשי</th><th>חיסכון שנתי</th><th>עמלת פירעון</th><th>המלצה</th></tr></thead>
+          <tbody id="combos-body"></tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:1rem">
+        <strong>איך לקרוא את הטבלה:</strong> חיסכון שנתי מחושב על בסיס יתרה נוכחית של ₪2,069,283. "עמלת פירעון" היא אומדן — הנתון המדויק מהבנק תמיד גובר. מומלץ לבקש הצעת מיחזור מ-2-3 בנקים.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>מסקנטה · נתוני בנק ישראל ינואר 2026 (פורסמו 11/02/2026) · מקור: boi.org.il · המידע לצרכי מידע בלבד ואינו מהווה ייעוץ פיננסי</footer>
+
+<script>
+const COMBOS = [
+  {name:'פריים + מל"צ 5 שנים + מצמ 2.5',avgRate:3.42,monthly:10680,savingsY:7224,penalty:'נמוכה',tag:'מומלץ',tagClass:'tag-green',filter:['all','save5k']},
+  {name:'פריים + מצמ 2.5 שנים מלא',avgRate:3.20,monthly:10600,savingsY:8184,penalty:'נמוכה',tag:'אגרסיבי',tagClass:'tag-amber',filter:['all','save5k','low','nopen']},
+  {name:'מצמ 2.5 שנים + מל"צ 2 שנים',avgRate:3.55,monthly:10800,savingsY:5784,penalty:'נמוכה',tag:'טוב',tagClass:'tag-blue',filter:['all','save5k','low','nopen']},
+  {name:'פריים + קל"צ + מצמ',avgRate:3.58,monthly:10820,savingsY:5544,penalty:'בינונית',tag:'טוב',tagClass:'tag-blue',filter:['all','save5k','fixed']},
+  {name:'פריים + מל"צ 5 שנים',avgRate:3.65,monthly:10893,savingsY:4668,penalty:'נמוכה',tag:'טוב',tagClass:'tag-blue',filter:['all','nocz','nopen']},
+  {name:'פריים + מל"צ 2 שנים',avgRate:3.72,monthly:10950,savingsY:3984,penalty:'נמוכה',tag:'טוב',tagClass:'tag-blue',filter:['all','nocz','low','nopen']},
+  {name:'פריים 50% + מל"צ 5 שנים 50%',avgRate:3.78,monthly:10980,savingsY:3624,penalty:'נמוכה',tag:'מאוזן',tagClass:'tag-blue',filter:['all','nocz','nopen']},
+  {name:'קל"צ + פריים',avgRate:3.89,monthly:11050,savingsY:2784,penalty:'גבוהה',tag:'שקול',tagClass:'tag-gray',filter:['all','fixed']},
+  {name:'מצמ + קל"צ',avgRate:3.95,monthly:11100,savingsY:2184,penalty:'גבוהה',tag:'שקול',tagClass:'tag-gray',filter:['all','fixed']},
+  {name:'מל"צ 5 שנים מלא',avgRate:4.10,monthly:11180,savingsY:1224,penalty:'נמוכה',tag:'בסיסי',tagClass:'tag-gray',filter:['all','nocz','nopen']},
+];
+
+function fmt(n){return '₪'+Math.round(n).toLocaleString('he-IL')}
+function fmtR(n){return n.toFixed(2)+'%'}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+function buildGaps(){
+  /* נתוני בנק ישראל — ינואר 2026 (פורסמו פברואר 2026) */
+  const M=[
+    {name:'פריים (עד שנה, לא צמוד)',myRate:2.48,market:5.10,note:'ריבית פריים = בנק ישראל + 1.5%'},
+    {name:'קבועה לא צמודה (מעל 25 שנה)',myRate:4.80,market:4.95,note:'ממוצע שוק: 4.95%'},
+    {name:'משתנה 5 שנים, לא צמוד (10-15 שנה)',myRate:4.85,market:4.77,note:'ממוצע שוק: 4.77%'},
+    {name:'משתנה 2 שנים, לא צמוד (מעל 25 שנה)',myRate:5.10,market:4.95,note:'ממוצע שוק: 4.95%'},
+    {name:'משתנה 2.5 שנים, צמוד מדד (עד 5 שנים)',myRate:3.28,market:3.67,note:'ממוצע שוק: 3.67%'},
+    {name:'משתנה 2.5 שנים, צמוד מדד (5-10 שנים)',myRate:3.39,market:3.73,note:'ממוצע שוק: 3.73%'},
+  ];
+  const maxG=1.5;
+  document.getElementById('gap-list').innerHTML=M.map(m=>{
+    const d=+(m.myRate-m.market).toFixed(2);
+    const p=Math.min(Math.abs(d)/maxG*100,100);
+    const c=d>0.3?'#c03030':d>0.05?'#d4860a':d<-0.05?'#2a8a4a':'#2a8a4a';
+    const sign=d>0?'+':d<0?'':'+';
+    return `<div class="gap-row" style="flex-wrap:wrap">
+      <span class="gap-label">${m.name}</span>
+      <div class="gap-track"><div class="gap-fill" style="width:${p}%;background:${c}"></div></div>
+      <span class="gap-pct" style="color:${c}">${d>0?'+':''}${d.toFixed(2)}%</span>
+      <span style="font-size:11px;color:var(--text3);width:100%;padding-right:4px">שלי: ${fmtR(m.myRate)} | שוק: ${fmtR(m.market)} ${m.note?'— '+m.note:''}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('weak-list').innerHTML=M.filter(m=>m.myRate-m.market>0.2).map(m=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">${m.name}</span><span style="color:var(--danger);font-weight:600">${fmtR(m.myRate)} → שוק ${fmtR(m.market)}</span></div>`).join('') || '<p style="font-size:13px;color:var(--text3)">אין מסלולים יקרים משמעותית</p>';
+  document.getElementById('strong-list').innerHTML=M.filter(m=>m.myRate-m.market<=0.1).map(m=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text2)">${m.name}</span><span style="color:var(--good);font-weight:600">${fmtR(m.myRate)} ✓</span></div>`).join('') || '<p style="font-size:13px;color:var(--text3)">—</p>';
+}
+
+function filterCombos(f,btn){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered=COMBOS.filter(c=>c.filter.includes(f));
+  document.getElementById('combos-body').innerHTML=filtered.map((c,i)=>`
+    <tr>
+      <td>${i===0?'<span class="tag tag-green" style="margin-left:6px">מיטבי</span>':''}${c.name}</td>
+      <td style="font-weight:600">${fmtR(c.avgRate)}</td>
+      <td>${fmt(c.monthly)}</td>
+      <td><span class="savings-chip">${fmt(c.savingsY)}</span></td>
+      <td style="color:${c.penalty==='נמוכה'?'var(--good)':c.penalty==='גבוהה'?'var(--danger)':'var(--warn)'};font-weight:500">${c.penalty}</td>
+      <td><span class="tag ${c.tagClass}">${c.tag}</span></td>
+    </tr>`).join('');
+}
+
+window.addEventListener('load',()=>{
+  buildGaps();
+  filterCombos('all',document.querySelector('.pill'));
+
+  new Chart(document.getElementById('overviewChart'),{
+    type:'doughnut',
+    data:{labels:['פריים','מצמ 2.5 שנים','קל"צ (443)','קל"צ (442)','מל"צ 5 שנים','מל"צ 2 שנים'],datasets:[{data:[297038,350000,200000,412223,360056,449231],backgroundColor:['#1D9E75','#378ADD','#D85A30','#E24B4A','#534AB7','#BA7517'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:12}}}}
+  });
+
+  new Chart(document.getElementById('bankChart'),{
+    type:'bar',
+    data:{labels:['קל"צ (לא צמוד)','מל"צ 5 שנים (לא צמוד)','פריים (לא צמוד)','מצמ 5-10 שנים (צמוד)','מצמ עד 5 שנים (צמוד)'],datasets:[
+      {label:'ממוצע שוק (בנק ישראל ינואר 2026)',data:[4.95,4.77,5.10,3.73,3.67],backgroundColor:'#1D9E75',borderRadius:4},
+      {label:'ריביות שלך',data:[4.80,4.85,2.48,3.39,3.28],backgroundColor:'#E24B4A',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:1.5,max:6,ticks:{callback:v=>v+'%'}}},plugins:{legend:{labels:{font:{size:11}}}}}
+  });
+
+  new Chart(document.getElementById('compareChart'),{
+    type:'bar',
+    data:{labels:['קל"צ (לא צמוד)','מל"צ 5 שנים (לא צמוד)','מל"צ 2 שנים (לא צמוד)','מצמ (צמוד מדד)'],datasets:[
+      {label:'ריבית שלי',data:[4.80,4.85,5.10,3.34],backgroundColor:'#F09595',borderRadius:4},
+      {label:'ממוצע שוק (בנק ישראל ינואר 2026)',data:[4.95,4.77,4.95,3.70],backgroundColor:'#5DCAA5',borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:1.5,ticks:{callback:v=>v+'%'}}},plugins:{legend:{labels:{font:{size:12}}}}}
+  });
+
+  new Chart(document.getElementById('savingsChart'),{
+    type:'line',
+    data:{labels:['1 שנה','2 שנים','3 שנים','5 שנים','7 שנים','10 שנים','15 שנים','20 שנים'],datasets:[{label:'חיסכון מצטבר',data:[4668,9336,14004,23340,32676,46680,70020,93360],borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',fill:true,tension:0.35,pointRadius:5,pointBackgroundColor:'#1D9E75',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>'₪'+v.toLocaleString()}}},plugins:{legend:{display:false}}}
+  });
+});
+</script>
+</body>
+</html>
